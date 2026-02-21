@@ -5,6 +5,7 @@ import {
   parsePlateData, analyze, exportResultsCSV, getCurvePlotData,
   ROWS, COLS, wellName, getStandardPoints, computeBlankMean,
 } from '@elisalab/engine';
+import { sampleDatasets } from './samples/index.js';
 import PlateGrid from './components/PlateGrid.js';
 import StandardCurveChart from './components/StandardCurveChart.js';
 import ResultsTable from './components/ResultsTable.js';
@@ -136,6 +137,17 @@ export default function App() {
     setResult(null);
   }, []);
 
+  const handleLoadSample = useCallback((index: number) => {
+    const sample = sampleDatasets[index];
+    if (!sample) return;
+    setPlateData(sample.plateData);
+    setLayout(sample.layout);
+    setStdConcentrations(sample.standardConcentrations);
+    setNextStdIndex(sample.standardConcentrations.length);
+    setResult(null);
+    setError(null);
+  }, []);
+
   // Prepare chart data
   let curveData: { x: number; y: number }[] = [];
   let stdPointsForChart: { concentration: number; od: number }[] = [];
@@ -155,6 +167,7 @@ export default function App() {
         onExportChart={handleExportChart}
         onToggleTheme={toggleTheme}
         onResetLayout={handleResetLayout}
+        onLoadSample={handleLoadSample}
         theme={theme}
         activeTool={activeTool}
         onToolChange={setActiveTool}

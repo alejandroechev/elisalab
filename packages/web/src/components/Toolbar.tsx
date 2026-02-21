@@ -1,3 +1,5 @@
+import { sampleDatasets } from '../samples/index.js';
+
 interface Props {
   onImport: () => void;
   onFitCurve: () => void;
@@ -5,6 +7,7 @@ interface Props {
   onExportChart: () => void;
   onToggleTheme: () => void;
   onResetLayout: () => void;
+  onLoadSample: (index: number) => void;
   theme: 'light' | 'dark';
   activeTool: string;
   onToolChange: (tool: any) => void;
@@ -14,7 +17,7 @@ interface Props {
 
 export default function Toolbar({
   onImport, onFitCurve, onExportCSV, onExportChart,
-  onToggleTheme, onResetLayout, theme, activeTool, onToolChange,
+  onToggleTheme, onResetLayout, onLoadSample, theme, activeTool, onToolChange,
   hasResult, hasData,
 }: Props) {
   return (
@@ -22,6 +25,17 @@ export default function Toolbar({
       <h1>🧪 ElisaLab</h1>
 
       <button onClick={onImport}>📋 Import Plate</button>
+
+      <select
+        value=""
+        onChange={e => { if (e.target.value !== '') onLoadSample(Number(e.target.value)); }}
+        style={{ padding: '6px 10px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg)', color: 'var(--fg)', fontSize: '0.85rem' }}
+      >
+        <option value="">📂 Samples</option>
+        {sampleDatasets.map((s, i) => (
+          <option key={i} value={i}>{s.name}</option>
+        ))}
+      </select>
 
       <select
         value={activeTool}
