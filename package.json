@@ -1,0 +1,9 @@
+{
+  "name": "elisalab",
+  "private": true,
+  "scripts": {
+    "test": "pnpm -r test",
+    "build": "pnpm -r build",
+    "dev": "pnpm --filter @elisalab/web dev"
+  }
+}
