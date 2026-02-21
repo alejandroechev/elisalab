@@ -38,6 +38,7 @@ export default function Toolbar({
       <button onClick={onFitCurve} disabled={!hasData}>📈 Fit Curve</button>
       <button onClick={onExportCSV} disabled={!hasResult}>💾 CSV</button>
       <button onClick={onExportChart} disabled={!hasResult}>🖼️ Chart PNG</button>
+      <button onClick={() => window.open('/intro.html', '_blank')} title="Domain guide">📖 Guide</button>
       <button onClick={onToggleTheme}>{theme === 'light' ? '🌙' : '☀️'}</button>
     </div>
   );

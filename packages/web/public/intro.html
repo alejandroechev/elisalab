@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ElisaLab — Introduction to ELISA &amp; 4PL Analysis</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --fg: #1e293b;
+    --fg-muted: #64748b;
+    --accent: #2563eb;
+    --accent-light: #dbeafe;
+    --border: #e2e8f0;
+    --card-bg: #f8fafc;
+    --code-bg: #f1f5f9;
+    --heading: #0f172a;
+    --eq-bg: #eff6ff;
+    --eq-border: #bfdbfe;
+    --glossary-dt: #1e40af;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f172a;
+      --fg: #e2e8f0;
+      --fg-muted: #94a3b8;
+      --accent: #60a5fa;
+      --accent-light: #1e3a5f;
+      --border: #334155;
+      --card-bg: #1e293b;
+      --code-bg: #1e293b;
+      --heading: #f1f5f9;
+      --eq-bg: #1e293b;
+      --eq-border: #334155;
+      --glossary-dt: #93c5fd;
+    }
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    line-height: 1.7;
+    padding: 2rem 1rem 4rem;
+  }
+  .container { max-width: 800px; margin: 0 auto; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .back-link { display: inline-block; margin-bottom: 2rem; font-size: 0.9rem; }
+
+  /* Hero */
+  .hero {
+    text-align: center;
+    padding: 3rem 0 2.5rem;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 3rem;
+  }
+  .hero h1 { font-size: 2.5rem; color: var(--heading); margin-bottom: 0.5rem; }
+  .hero .tagline { font-size: 1.15rem; color: var(--fg-muted); }
+
+  /* Sections */
+  section { margin-bottom: 3rem; }
+  h2 {
+    font-size: 1.5rem;
+    color: var(--heading);
+    margin-bottom: 1rem;
+    padding-bottom: 0.4rem;
+    border-bottom: 2px solid var(--accent);
+    display: inline-block;
+  }
+  h3 { font-size: 1.15rem; color: var(--heading); margin: 1.5rem 0 0.5rem; }
+  p { margin-bottom: 1rem; }
+  ul, ol { margin: 0 0 1rem 1.5rem; }
+  li { margin-bottom: 0.4rem; }
+
+  /* Equation box */
+  .equation {
+    background: var(--eq-bg);
+    border: 1px solid var(--eq-border);
+    border-radius: 8px;
+    padding: 1.25rem 1.5rem;
+    margin: 1.25rem 0;
+    text-align: center;
+    font-size: 1.1rem;
+    font-family: 'Cambria Math', 'Times New Roman', serif;
+    overflow-x: auto;
+  }
+
+  /* Card */
+  .card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.25rem 1.5rem;
+    margin: 1rem 0;
+  }
+
+  /* Parameter table */
+  table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+  th, td { text-align: left; padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--border); }
+  th { font-weight: 600; color: var(--heading); font-size: 0.9rem; }
+  td { font-size: 0.9rem; }
+  code {
+    background: var(--code-bg);
+    padding: 0.15rem 0.4rem;
+    border-radius: 4px;
+    font-size: 0.88rem;
+  }
+
+  /* Steps */
+  .steps { counter-reset: step; list-style: none; margin-left: 0; }
+  .steps li {
+    counter-increment: step;
+    position: relative;
+    padding-left: 2.5rem;
+    margin-bottom: 1.25rem;
+  }
+  .steps li::before {
+    content: counter(step);
+    position: absolute;
+    left: 0;
+    top: 0.05rem;
+    width: 1.75rem;
+    height: 1.75rem;
+    background: var(--accent);
+    color: #fff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    font-weight: 700;
+  }
+
+  /* Glossary */
+  dl { margin: 0; }
+  dt {
+    font-weight: 600;
+    color: var(--glossary-dt);
+    margin-top: 0.75rem;
+  }
+  dd { margin-left: 1rem; margin-bottom: 0.5rem; color: var(--fg); }
+
+  /* Plate diagram */
+  .plate-diagram {
+    display: grid;
+    grid-template-columns: 1.5rem repeat(12, 1fr);
+    gap: 2px;
+    max-width: 500px;
+    margin: 1rem auto;
+    font-size: 0.65rem;
+    text-align: center;
+  }
+  .plate-cell {
+    aspect-ratio: 1;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    border: 1px solid var(--border);
+  }
+  .plate-cell.std { background: #3b82f6; color: #fff; }
+  .plate-cell.unk { background: #22c55e; color: #fff; }
+  .plate-cell.blk { background: #94a3b8; color: #fff; }
+  .plate-cell.empty-well { background: var(--card-bg); color: var(--fg-muted); }
+  .plate-header { font-weight: 700; color: var(--fg-muted); display: flex; align-items: center; justify-content: center; }
+
+  .references { font-size: 0.9rem; }
+  .references li { margin-bottom: 0.5rem; }
+
+  footer {
+    text-align: center;
+    color: var(--fg-muted);
+    font-size: 0.8rem;
+    margin-top: 3rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+<a href="/" class="back-link">← Back to ElisaLab</a>
+
+<!-- Hero -->
+<div class="hero">
+  <h1>🧪 ElisaLab</h1>
+  <p class="tagline">Free, browser-based ELISA data analysis — 4PL curve fitting &amp; concentration interpolation</p>
+</div>
+
+<!-- What is ELISA? -->
+<section>
+  <h2>What is ELISA?</h2>
+  <p>
+    <strong>Enzyme-Linked Immunosorbent Assay (ELISA)</strong> is one of the most widely used laboratory techniques in biomedical research, diagnostics, and drug development. It exploits the extraordinary specificity of antibody–antigen binding to detect and quantify proteins, hormones, cytokines, and other analytes in biological samples.
+  </p>
+  <h3>How it works</h3>
+  <p>
+    An antibody is immobilized on the surface of a 96-well microplate. When a sample is added, the target molecule (antigen) binds to the antibody. A second enzyme-linked antibody is then added to form a "sandwich" around the antigen. Finally, a chromogenic substrate is introduced — the enzyme converts it into a colored product. The intensity of the color is proportional to the amount of antigen captured.
+  </p>
+  <h3>ELISA formats</h3>
+  <div class="card">
+    <ul>
+      <li><strong>Direct ELISA</strong> — antigen is coated directly on the plate; a single enzyme-conjugated antibody detects it. Simple but less sensitive.</li>
+      <li><strong>Indirect ELISA</strong> — antigen on plate; a primary antibody binds it, then an enzyme-conjugated secondary antibody amplifies the signal.</li>
+      <li><strong>Sandwich ELISA</strong> — a capture antibody on the plate binds the antigen; a detection antibody forms the sandwich. High specificity and the most common quantitative format.</li>
+      <li><strong>Competitive ELISA</strong> — sample antigen competes with a labeled antigen for antibody binding. The signal is inversely proportional to sample concentration.</li>
+    </ul>
+  </div>
+  <h3>Colorimetric detection</h3>
+  <p>
+    A microplate reader measures the <strong>optical density (OD)</strong> — typically absorbance at 450 nm — of each well. Higher OD means more antigen was captured. To convert raw OD readings into actual concentrations, you need a <strong>standard curve</strong>.
+  </p>
+</section>
+
+<!-- 4PL Curve -->
+<section>
+  <h2>The 4-Parameter Logistic (4PL) Curve</h2>
+  <p>
+    When you plot known standard concentrations against their OD values, the relationship is not linear — it follows a characteristic <strong>sigmoidal (S-shaped) curve</strong>. This arises because antibody binding sites saturate at high concentrations (plateau) and have a detection floor at low concentrations (baseline).
+  </p>
+  <p>
+    The 4-Parameter Logistic model captures this sigmoidal behavior with four parameters:
+  </p>
+  <div class="equation">
+    y = D + (A − D) / (1 + (x / C)<sup>B</sup>)
+  </div>
+  <table>
+    <thead>
+      <tr><th>Parameter</th><th>Name</th><th>Meaning</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><strong>A</strong></td><td>Minimum asymptote</td><td>The response (OD) at zero concentration — the bottom of the curve</td></tr>
+      <tr><td><strong>B</strong></td><td>Hill slope</td><td>Steepness of the curve at the inflection point; controls how quickly the transition occurs</td></tr>
+      <tr><td><strong>C</strong></td><td>EC50 / Inflection</td><td>The concentration at the midpoint between A and D — where y = (A+D)/2</td></tr>
+      <tr><td><strong>D</strong></td><td>Maximum asymptote</td><td>The response at saturating concentration — the top of the curve</td></tr>
+    </tbody>
+  </table>
+  <h3>Interpreting EC50</h3>
+  <p>
+    The <strong>EC50</strong> (parameter C) is the concentration that produces a response halfway between the minimum and maximum. It characterizes the sensitivity of your assay — a lower EC50 means the assay can detect lower concentrations of analyte.
+  </p>
+  <h3>Inverse 4PL — getting concentrations from OD</h3>
+  <p>
+    Once the curve is fitted, you can solve for the unknown concentration <em>x</em> given a measured OD value <em>y</em>:
+  </p>
+  <div class="equation">
+    x = C × ((A − D) / (y − D) − 1)<sup>1/B</sup>
+  </div>
+  <p>
+    This is how ElisaLab converts raw OD readings from unknown samples into concentrations.
+  </p>
+</section>
+
+<!-- Key Concepts -->
+<section>
+  <h2>Key Concepts</h2>
+
+  <h3>Standard curves</h3>
+  <p>
+    A series of wells with <em>known</em> concentrations of the analyte (typically 6–8 points in a serial dilution) that define the dose–response relationship. The 4PL curve is fitted to these points. A good standard curve has an R² ≥ 0.99.
+  </p>
+
+  <h3>Interpolation of unknowns</h3>
+  <p>
+    Unknown sample OD values are plugged into the inverse 4PL equation to read off concentrations. Samples whose OD falls outside the standard curve range (above the top standard or below the bottom standard) are flagged as out-of-range.
+  </p>
+
+  <h3>Replicate quality control (CV%)</h3>
+  <p>
+    Replicates (typically duplicates or triplicates) of each sample are measured. The <strong>coefficient of variation</strong> assesses precision:
+  </p>
+  <div class="equation">
+    CV% = (Standard Deviation / Mean) × 100
+  </div>
+  <p>
+    A CV% below 10–15% is generally acceptable. ElisaLab flags replicates with high variability so you can identify pipetting errors or other issues.
+  </p>
+
+  <h3>Blank subtraction</h3>
+  <p>
+    Blank wells (no analyte, no sample) measure the background signal from the plate, reagents, and substrate. The mean blank OD is subtracted from all other wells before curve fitting to remove systematic bias.
+  </p>
+
+  <h3>Plate layout</h3>
+  <p>
+    A 96-well plate is organized as an 8×12 grid (rows A–H, columns 1–12). Each well is assigned a role:
+  </p>
+  <div class="plate-diagram">
+    <div class="plate-header"></div>
+    <div class="plate-header">1</div><div class="plate-header">2</div>
+    <div class="plate-header">3</div><div class="plate-header">4</div>
+    <div class="plate-header">5</div><div class="plate-header">6</div>
+    <div class="plate-header">7</div><div class="plate-header">8</div>
+    <div class="plate-header">9</div><div class="plate-header">10</div>
+    <div class="plate-header">11</div><div class="plate-header">12</div>
+
+    <div class="plate-header">A</div>
+    <div class="plate-cell std">S1</div><div class="plate-cell std">S1</div>
+    <div class="plate-cell unk">U1</div><div class="plate-cell unk">U1</div>
+    <div class="plate-cell unk">U5</div><div class="plate-cell unk">U5</div>
+    <div class="plate-cell unk">U9</div><div class="plate-cell unk">U9</div>
+    <div class="plate-cell unk">U13</div><div class="plate-cell unk">U13</div>
+    <div class="plate-cell blk">B</div><div class="plate-cell blk">B</div>
+
+    <div class="plate-header">B</div>
+    <div class="plate-cell std">S2</div><div class="plate-cell std">S2</div>
+    <div class="plate-cell unk">U2</div><div class="plate-cell unk">U2</div>
+    <div class="plate-cell unk">U6</div><div class="plate-cell unk">U6</div>
+    <div class="plate-cell unk">U10</div><div class="plate-cell unk">U10</div>
+    <div class="plate-cell unk">U14</div><div class="plate-cell unk">U14</div>
+    <div class="plate-cell empty-well"></div><div class="plate-cell empty-well"></div>
+
+    <div class="plate-header">C</div>
+    <div class="plate-cell std">S3</div><div class="plate-cell std">S3</div>
+    <div class="plate-cell unk">U3</div><div class="plate-cell unk">U3</div>
+    <div class="plate-cell unk">U7</div><div class="plate-cell unk">U7</div>
+    <div class="plate-cell unk">U11</div><div class="plate-cell unk">U11</div>
+    <div class="plate-cell unk">U15</div><div class="plate-cell unk">U15</div>
+    <div class="plate-cell empty-well"></div><div class="plate-cell empty-well"></div>
+
+    <div class="plate-header">D</div>
+    <div class="plate-cell std">S4</div><div class="plate-cell std">S4</div>
+    <div class="plate-cell unk">U4</div><div class="plate-cell unk">U4</div>
+    <div class="plate-cell unk">U8</div><div class="plate-cell unk">U8</div>
+    <div class="plate-cell unk">U12</div><div class="plate-cell unk">U12</div>
+    <div class="plate-cell unk">U16</div><div class="plate-cell unk">U16</div>
+    <div class="plate-cell empty-well"></div><div class="plate-cell empty-well"></div>
+
+    <div class="plate-header">E</div>
+    <div class="plate-cell std">S5</div><div class="plate-cell std">S5</div>
+    <div class="plate-cell empty-well"></div><div class="plate-cell empty-well"></div>
+    <div class="plate-cell empty-well"></div><div class="plate-cell empty-well"></div>
+    <div class="plate-cell empty-well"></div><div class="plate-cell empty-well"></div>
+    <div class="plate-cell empty-well"></div><div class="plate-cell empty-well"></div>
+    <div class="plate-cell empty-well"></div><div class="plate-cell empty-well"></div>
+
+    <div class="plate-header">F</div>
+    <div class="plate-cell std">S6</div><div class="plate-cell std">S6</div>
+    <div class="plate-cell empty-well"></div><div class="plate-cell empty-well"></div>
+    <div class="plate-cell empty-well"></div><div class="plate-cell empty-well"></div>
+    <div class="plate-cell empty-well"></div><div class="plate-cell empty-well"></div>
+    <div class="plate-cell empty-well"></div><div class="plate-cell empty-well"></div>
+    <div class="plate-cell empty-well"></div><div class="plate-cell empty-well"></div>
+
+    <div class="plate-header">G</div>
+    <div class="plate-cell std">S7</div><div class="plate-cell std">S7</div>
+    <div class="plate-cell empty-well"></div><div class="plate-cell empty-well"></div>
+    <div class="plate-cell empty-well"></div><div class="plate-cell empty-well"></div>
+    <div class="plate-cell empty-well"></div><div class="plate-cell empty-well"></div>
+    <div class="plate-cell empty-well"></div><div class="plate-cell empty-well"></div>
+    <div class="plate-cell empty-well"></div><div class="plate-cell empty-well"></div>
+
+    <div class="plate-header">H</div>
+    <div class="plate-cell std">S8</div><div class="plate-cell std">S8</div>
+    <div class="plate-cell empty-well"></div><div class="plate-cell empty-well"></div>
+    <div class="plate-cell empty-well"></div><div class="plate-cell empty-well"></div>
+    <div class="plate-cell empty-well"></div><div class="plate-cell empty-well"></div>
+    <div class="plate-cell empty-well"></div><div class="plate-cell empty-well"></div>
+    <div class="plate-cell empty-well"></div><div class="plate-cell empty-well"></div>
+  </div>
+  <p style="text-align:center; font-size:0.8rem; color:var(--fg-muted);">
+    Example layout: 8 standards in duplicate (columns 1–2), unknowns in duplicate, blanks in column 11–12 row A.
+  </p>
+</section>
+
+<!-- How to Use ElisaLab -->
+<section>
+  <h2>How to Use ElisaLab</h2>
+  <ol class="steps">
+    <li>
+      <strong>Import plate data</strong> — Click "📋 Import Plate" and paste your 8×12 grid of OD values (tab- or comma-separated). You can copy directly from Excel or a plate reader export file.
+    </li>
+    <li>
+      <strong>Set up standard concentrations</strong> — Enter your serial dilution concentrations in the Standard Concentrations panel (e.g., 1000, 500, 250, 125, 62.5, 31.25, 15.625, 7.8125).
+    </li>
+    <li>
+      <strong>Assign well types</strong> — Select a tool (Standard, Unknown, Blank) from the dropdown, then click wells on the plate grid to assign them. Standards are assigned in order of your concentration list. Click a well again to clear it.
+    </li>
+    <li>
+      <strong>Fit the curve</strong> — Click "📈 Fit Curve". ElisaLab subtracts the blank mean, fits a 4PL model to your standards using Levenberg-Marquardt optimization, and interpolates unknown concentrations.
+    </li>
+    <li>
+      <strong>Review results</strong> — The standard curve chart shows your data points and the fitted 4PL curve with R². The results table lists each sample group with mean OD, interpolated concentration, and CV%.
+    </li>
+    <li>
+      <strong>Export</strong> — Download results as CSV ("💾 CSV") or save the standard curve chart as PNG ("🖼️ Chart PNG") for reports and publications.
+    </li>
+  </ol>
+</section>
+
+<!-- Glossary -->
+<section>
+  <h2>Glossary</h2>
+  <dl>
+    <dt>OD (Optical Density)</dt>
+    <dd>Absorbance measured by the plate reader, typically at 450 nm. Higher OD indicates more analyte bound in the well.</dd>
+
+    <dt>Standard Curve</dt>
+    <dd>A set of wells with known concentrations used to establish the dose–response relationship. The 4PL model is fitted to these points.</dd>
+
+    <dt>4PL (4-Parameter Logistic)</dt>
+    <dd>A mathematical model describing the sigmoidal relationship between concentration and OD. Parameters: minimum asymptote (A), Hill slope (B), EC50 (C), maximum asymptote (D).</dd>
+
+    <dt>EC50</dt>
+    <dd>The effective concentration at 50% of the maximum response — the inflection point of the 4PL curve (parameter C).</dd>
+
+    <dt>Hill Slope</dt>
+    <dd>The steepness of the curve at the inflection point (parameter B). A steeper slope means a narrower dynamic range.</dd>
+
+    <dt>R² (Coefficient of Determination)</dt>
+    <dd>Goodness-of-fit metric ranging from 0 to 1. Values ≥ 0.99 indicate an excellent fit. Calculated as 1 − (SS<sub>res</sub> / SS<sub>tot</sub>).</dd>
+
+    <dt>CV% (Coefficient of Variation)</dt>
+    <dd>Precision metric for replicate measurements: (SD / Mean) × 100. Below 10–15% is acceptable for most immunoassays.</dd>
+
+    <dt>Blank</dt>
+    <dd>Wells containing no analyte or sample, used to measure background signal. The mean blank OD is subtracted from all wells.</dd>
+
+    <dt>Interpolation</dt>
+    <dd>Using the inverse 4PL equation to calculate the concentration of an unknown sample from its measured OD value.</dd>
+
+    <dt>Out-of-Range</dt>
+    <dd>A sample whose OD falls outside the range of the standard curve, meaning its concentration cannot be reliably interpolated. These require dilution (if too high) or concentration (if too low).</dd>
+
+    <dt>Serial Dilution</dt>
+    <dd>A stepwise dilution series (e.g., 1:2) used to prepare standards spanning several orders of magnitude in concentration.</dd>
+
+    <dt>Levenberg-Marquardt</dt>
+    <dd>An iterative optimization algorithm used to fit the 4PL model to standard curve data by minimizing the sum of squared residuals.</dd>
+  </dl>
+</section>
+
+<!-- References -->
+<section>
+  <h2>References</h2>
+  <ol class="references">
+    <li>Wild, D. (Ed.). <em>The Immunoassay Handbook</em>, 4th Edition. Elsevier, 2013. — Comprehensive reference on immunoassay theory and practice.</li>
+    <li>Crowther, J.R. <em>The ELISA Guidebook</em>, 2nd Edition. Humana Press, 2009. — Practical guide to ELISA protocol design and data analysis.</li>
+    <li>Findlay, J.W.A. &amp; Dillard, R.F. "Appropriate calibration curve fitting in ligand binding assays." <em>AAPS Journal</em>, 9(2), E260–E267, 2007. — Discusses 4PL and 5PL model selection.</li>
+    <li>Gottschalk, P.G. &amp; Dunn, J.R. "The five-parameter logistic: A characterization and comparison with the four-parameter logistic." <em>Analytical Biochemistry</em>, 343(1), 54–65, 2005.</li>
+    <li>NIST/SEMATECH e-Handbook of Statistical Methods. <a href="https://www.itl.nist.gov/div898/handbook/">https://www.itl.nist.gov/div898/handbook/</a> — Nonlinear regression and curve fitting methodology.</li>
+  </ol>
+</section>
+
+<footer>
+  ElisaLab is free, open-source software. All calculations run entirely in your browser — no data is uploaded.
+</footer>
+
+</div>
+</body>
+</html>
