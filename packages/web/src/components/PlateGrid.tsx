@@ -1,4 +1,4 @@
-import { useRef, useCallback } from 'react';
+import { Fragment, useRef, useCallback } from 'react';
 import { PlateLayout, PlateData, COLS, wellName } from '@elisalab/engine';
 
 interface Props {
@@ -36,7 +36,7 @@ export default function PlateGrid({ layout, plateData, onWellClick, onWellDragOv
           <div key={c} className="col-header">{c}</div>
         ))}
         {rowHeaders.map((rLabel, r) => (
-          <>
+          <Fragment key={r}>
             <div key={`rh-${r}`} className="row-header">{rLabel}</div>
             {colHeaders.map((_, c) => {
               const assignment = layout.assignments[r][c];
@@ -55,7 +55,7 @@ export default function PlateGrid({ layout, plateData, onWellClick, onWellDragOv
                 </div>
               );
             })}
-          </>
+          </Fragment>
         ))}
       </div>
     </div>
