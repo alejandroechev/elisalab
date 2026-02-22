@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import {
   PlateData, PlateLayout, AnalysisResult,
   createEmptyLayout, assignWell, WellAssignment,
@@ -15,6 +15,23 @@ import StandardEntry from './components/StandardEntry.js';
 
 type WellTool = 'standard' | 'unknown' | 'blank' | 'empty';
 
+const STORAGE_KEY = 'elisalab-state';
+
+interface PersistedState {
+  layout: PlateLayout;
+  plateData: PlateData | null;
+  stdConcentrations: number[];
+  nextStdIndex: number;
+}
+
+function loadPersisted(): PersistedState | null {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) return JSON.parse(saved);
+  } catch { /* ignore */ }
+  return null;
+}
+
 function loadTheme(): 'light' | 'dark' {
   try {
     const saved = localStorage.getItem('elisalab-theme');
@@ -24,18 +41,30 @@ function loadTheme(): 'light' | 'dark' {
 }
 
 export default function App() {
+  const saved = useRef(loadPersisted());
   const [theme, setTheme] = useState<'light' | 'dark'>(loadTheme);
-  const [layout, setLayout] = useState<PlateLayout>(createEmptyLayout());
-  const [plateData, setPlateData] = useState<PlateData | null>(null);
+  const [layout, setLayout] = useState<PlateLayout>(saved.current?.layout ?? createEmptyLayout());
+  const [plateData, setPlateData] = useState<PlateData | null>(saved.current?.plateData ?? null);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [showPaste, setShowPaste] = useState(false);
   const [activeTool, setActiveTool] = useState<WellTool>('standard');
-  const [stdConcentrations, setStdConcentrations] = useState<number[]>([
-    1000, 500, 250, 125, 62.5, 31.25, 15.625, 7.8125,
-  ]);
-  const [nextStdIndex, setNextStdIndex] = useState(0);
+  const [stdConcentrations, setStdConcentrations] = useState<number[]>(
+    saved.current?.stdConcentrations ?? [1000, 500, 250, 125, 62.5, 31.25, 15.625, 7.8125],
+  );
+  const [nextStdIndex, setNextStdIndex] = useState(saved.current?.nextStdIndex ?? 0);
   const [error, setError] = useState<string | null>(null);
   const [selectedWells, setSelectedWells] = useState<Set<string>>(new Set());
+
+  // Auto-save state to localStorage
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      try {
+        const state: PersistedState = { layout, plateData, stdConcentrations, nextStdIndex };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      } catch { /* ignore */ }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [layout, plateData, stdConcentrations, nextStdIndex]);
 
   useEffect(() => {
     try { localStorage.setItem('elisalab-theme', theme); } catch { /* ignore */ }

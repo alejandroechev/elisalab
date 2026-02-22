@@ -474,3 +474,27 @@ test.describe('User Feedback', () => {
     await expect(page.locator('.export-inline button', { hasText: 'CSV' })).toBeVisible();
   });
 });
+
+// ──────────────────────────────────────────
+// State Persistence
+// ──────────────────────────────────────────
+
+test.describe('State Persistence', () => {
+  test('plate layout and data persist across page reload', async ({ page }) => {
+    await page.goto('/');
+    // Load a sample
+    await loadSample(page, 0);
+    // Wait for debounced save
+    await page.waitForTimeout(700);
+    // Verify localStorage has state
+    const stored = await page.evaluate(() => localStorage.getItem('elisalab-state'));
+    expect(stored).toBeTruthy();
+    const parsed = JSON.parse(stored!);
+    expect(parsed.plateData).toBeTruthy();
+    expect(parsed.layout).toBeTruthy();
+    // Reload and verify wells still have assignments
+    await page.reload();
+    const well = page.locator('.well').first();
+    await expect(well).toHaveAttribute('data-type', 'standard');
+  });
+});
