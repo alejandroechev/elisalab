@@ -1,9 +1,9 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
-  PlateData, PlateLayout, AnalysisResult, CurveFitResult,
+  PlateData, PlateLayout, AnalysisResult,
   createEmptyLayout, assignWell, WellAssignment,
   parsePlateData, analyze, exportResultsCSV, getCurvePlotData,
-  ROWS, COLS, wellName, getStandardPoints, computeBlankMean,
+  COLS, getStandardPoints,
 } from '@elisalab/engine';
 import { sampleDatasets } from './samples/index.js';
 import PlateGrid from './components/PlateGrid.js';
@@ -15,8 +15,16 @@ import StandardEntry from './components/StandardEntry.js';
 
 type WellTool = 'standard' | 'unknown' | 'blank' | 'empty';
 
+function loadTheme(): 'light' | 'dark' {
+  try {
+    const saved = localStorage.getItem('elisalab-theme');
+    if (saved === 'dark' || saved === 'light') return saved;
+  } catch { /* ignore */ }
+  return 'light';
+}
+
 export default function App() {
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [theme, setTheme] = useState<'light' | 'dark'>(loadTheme);
   const [layout, setLayout] = useState<PlateLayout>(createEmptyLayout());
   const [plateData, setPlateData] = useState<PlateData | null>(null);
   const [result, setResult] = useState<AnalysisResult | null>(null);
@@ -27,6 +35,12 @@ export default function App() {
   ]);
   const [nextStdIndex, setNextStdIndex] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [selectedWells, setSelectedWells] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    try { localStorage.setItem('elisalab-theme', theme); } catch { /* ignore */ }
+    document.documentElement.setAttribute('data-theme', theme);
+  }, [theme]);
 
   const toggleTheme = useCallback(() => {
     setTheme(t => t === 'light' ? 'dark' : 'light');
@@ -44,43 +58,63 @@ export default function App() {
     }
   }, []);
 
-  const handleWellClick = useCallback((row: number, col: number) => {
+  const handleWellClick = useCallback((row: number, col: number, shiftKey: boolean) => {
+    const key = `${row},${col}`;
+    setSelectedWells(prev => {
+      const next = new Set(shiftKey ? prev : [key]);
+      if (shiftKey) {
+        if (next.has(key)) next.delete(key); else next.add(key);
+      }
+      return next;
+    });
+  }, []);
+
+  const handleWellDragOver = useCallback((row: number, col: number) => {
+    const key = `${row},${col}`;
+    setSelectedWells(prev => {
+      if (prev.has(key)) return prev;
+      const next = new Set(prev);
+      next.add(key);
+      return next;
+    });
+  }, []);
+
+  const handleApplyRole = useCallback((role: WellTool) => {
+    setActiveTool(role);
+    if (selectedWells.size === 0) return;
+
     setLayout(prev => {
-      const current = prev.assignments[row][col];
-      let assignment: WellAssignment;
+      let updated = prev;
+      let stdIdx = nextStdIndex;
+      const wells = Array.from(selectedWells).map(k => {
+        const [r, c] = k.split(',').map(Number);
+        return { r, c };
+      });
 
-      if (activeTool === 'standard') {
-        const conc = stdConcentrations[nextStdIndex % stdConcentrations.length] ?? 100;
-        const group = `S${nextStdIndex + 1}`;
-
-        // If clicking a second well with same tool and we just placed one, add to same group
-        if (current.type === 'standard') {
-          // Toggle off
-          return assignWell(prev, row, col, { type: 'empty' });
+      for (const { r, c } of wells) {
+        let assignment: WellAssignment;
+        if (role === 'standard') {
+          const conc = stdConcentrations[stdIdx % stdConcentrations.length] ?? 100;
+          const group = `S${stdIdx + 1}`;
+          assignment = { type: 'standard', concentration: conc, group };
+          stdIdx++;
+        } else if (role === 'unknown') {
+          assignment = { type: 'unknown', group: `U${r * COLS + c + 1}` };
+        } else if (role === 'blank') {
+          assignment = { type: 'blank', group: 'BLK' };
+        } else {
+          assignment = { type: 'empty' };
         }
-        assignment = { type: 'standard', concentration: conc, group };
-      } else if (activeTool === 'unknown') {
-        if (current.type === 'unknown') {
-          return assignWell(prev, row, col, { type: 'empty' });
-        }
-        assignment = { type: 'unknown', group: `U${row * COLS + col + 1}` };
-      } else if (activeTool === 'blank') {
-        if (current.type === 'blank') {
-          return assignWell(prev, row, col, { type: 'empty' });
-        }
-        assignment = { type: 'blank', group: 'BLK' };
-      } else {
-        assignment = { type: 'empty' };
+        updated = assignWell(updated, r, c, assignment);
       }
 
-      const updated = assignWell(prev, row, col, assignment);
-      if (activeTool === 'standard' && current.type !== 'standard') {
-        setNextStdIndex(i => i + 1);
-      }
+      if (role === 'standard') setNextStdIndex(stdIdx);
       return updated;
     });
+
     setResult(null);
-  }, [activeTool, stdConcentrations, nextStdIndex]);
+    setSelectedWells(new Set());
+  }, [selectedWells, stdConcentrations, nextStdIndex]);
 
   const handleFitCurve = useCallback(() => {
     if (!plateData) { setError('Import plate data first'); return; }
@@ -105,7 +139,7 @@ export default function App() {
     URL.revokeObjectURL(url);
   }, [result]);
 
-  const handleExportChart = useCallback(() => {
+  const handleExportChartPNG = useCallback(() => {
     const svg = document.querySelector('.chart-container svg');
     if (!svg) return;
     const svgData = new XMLSerializer().serializeToString(svg);
@@ -131,10 +165,24 @@ export default function App() {
     img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
   }, [theme]);
 
+  const handleExportChartSVG = useCallback(() => {
+    const svg = document.querySelector('.chart-container svg');
+    if (!svg) return;
+    const svgData = new XMLSerializer().serializeToString(svg);
+    const blob = new Blob([svgData], { type: 'image/svg+xml' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'standard-curve.svg';
+    a.click();
+    URL.revokeObjectURL(url);
+  }, []);
+
   const handleResetLayout = useCallback(() => {
     setLayout(createEmptyLayout());
     setNextStdIndex(0);
     setResult(null);
+    setSelectedWells(new Set());
   }, []);
 
   const handleLoadSample = useCallback((index: number) => {
@@ -146,6 +194,7 @@ export default function App() {
     setNextStdIndex(sample.standardConcentrations.length);
     setResult(null);
     setError(null);
+    setSelectedWells(new Set());
   }, []);
 
   // Prepare chart data
@@ -163,75 +212,100 @@ export default function App() {
       <Toolbar
         onImport={() => setShowPaste(true)}
         onFitCurve={handleFitCurve}
-        onExportCSV={handleExportCSV}
-        onExportChart={handleExportChart}
         onToggleTheme={toggleTheme}
         onResetLayout={handleResetLayout}
         onLoadSample={handleLoadSample}
         theme={theme}
-        activeTool={activeTool}
-        onToolChange={setActiveTool}
-        hasResult={!!result}
         hasData={!!plateData}
       />
 
-      {error && (
-        <div style={{ padding: '8px 12px', background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: 6, marginBottom: 12, color: '#dc2626', fontSize: '0.85rem' }}>
-          {error}
-        </div>
-      )}
+      {error && <div className="error-banner">{error}</div>}
 
-      <div className="legend">
-        <span className="legend-item"><span className="legend-swatch" style={{ background: 'var(--std-color)' }} /> Standard</span>
-        <span className="legend-item"><span className="legend-swatch" style={{ background: 'var(--unk-color)' }} /> Unknown</span>
-        <span className="legend-item"><span className="legend-swatch" style={{ background: 'var(--blank-color)' }} /> Blank</span>
-        <span className="legend-item"><span className="legend-swatch" style={{ background: 'var(--empty-color)', border: '1px solid var(--border)' }} /> Empty</span>
-      </div>
+      <div className="main-layout">
+        <div className="plate-section">
+          <div className="legend">
+            <span className="legend-item"><span className="legend-swatch" style={{ background: 'var(--std-color)' }} /> Standard</span>
+            <span className="legend-item"><span className="legend-swatch" style={{ background: 'var(--unk-color)' }} /> Unknown</span>
+            <span className="legend-item"><span className="legend-swatch" style={{ background: 'var(--blank-color)' }} /> Blank</span>
+            <span className="legend-item"><span className="legend-swatch" style={{ background: 'var(--empty-color)', border: '1px solid var(--border)' }} /> Empty</span>
+          </div>
 
-      <PlateGrid
-        layout={layout}
-        plateData={plateData}
-        onWellClick={handleWellClick}
-      />
+          <div className="role-selector" data-testid="role-selector">
+            <span style={{ fontSize: '0.8rem', color: 'var(--fg-muted)' }}>Assign role:</span>
+            <button className={activeTool === 'standard' ? 'active' : ''} onClick={() => handleApplyRole('standard')}>🔵 Standard</button>
+            <button className={activeTool === 'unknown' ? 'active' : ''} onClick={() => handleApplyRole('unknown')}>🟢 Unknown</button>
+            <button className={activeTool === 'blank' ? 'active' : ''} onClick={() => handleApplyRole('blank')}>⚪ Blank</button>
+            <button className={activeTool === 'empty' ? 'active' : ''} onClick={() => handleApplyRole('empty')}>❌ Clear</button>
+            {selectedWells.size > 0 && (
+              <span style={{ fontSize: '0.75rem', color: 'var(--accent)' }}>
+                {selectedWells.size} well{selectedWells.size > 1 ? 's' : ''} selected
+              </span>
+            )}
+          </div>
 
-      <StandardEntry
-        concentrations={stdConcentrations}
-        onChange={setStdConcentrations}
-      />
+          <PlateGrid
+            layout={layout}
+            plateData={plateData}
+            onWellClick={handleWellClick}
+            onWellDragOver={handleWellDragOver}
+            selectedWells={selectedWells}
+          />
 
-      <div className="panels">
-        <div className="panel">
-          <h3>Standard Curve</h3>
-          {result ? (
-            <>
-              <StandardCurveChart
-                curveData={curveData}
-                standardPoints={stdPointsForChart}
-              />
-              <div className="fit-info">
-                <strong>R² = {result.curveFit.rSquared.toFixed(4)}</strong> &nbsp;|&nbsp;
-                A={result.curveFit.params.A.toFixed(3)},
-                B={result.curveFit.params.B.toFixed(3)},
-                C={result.curveFit.params.C.toFixed(3)},
-                D={result.curveFit.params.D.toFixed(3)}
-              </div>
-            </>
-          ) : (
-            <p style={{ color: 'var(--fg-muted)', fontSize: '0.85rem' }}>
-              Import data & assign wells, then click "Fit Curve"
-            </p>
-          )}
+          <StandardEntry
+            concentrations={stdConcentrations}
+            onChange={setStdConcentrations}
+          />
         </div>
 
-        <div className="panel">
-          <h3>Results</h3>
-          {result ? (
-            <ResultsTable groups={result.groups} />
-          ) : (
-            <p style={{ color: 'var(--fg-muted)', fontSize: '0.85rem' }}>
-              No results yet
-            </p>
-          )}
+        <div className="results-section">
+          <div className="panel">
+            <div className="panel-header">
+              <h3>Standard Curve</h3>
+              {result && (
+                <div className="export-inline">
+                  <button onClick={handleExportChartPNG} title="Export as PNG">🖼️ PNG</button>
+                  <button onClick={handleExportChartSVG} title="Export as SVG">📐 SVG</button>
+                </div>
+              )}
+            </div>
+            {result ? (
+              <>
+                <StandardCurveChart
+                  curveData={curveData}
+                  standardPoints={stdPointsForChart}
+                />
+                <div className="fit-info">
+                  <strong>R² = {result.curveFit.rSquared.toFixed(4)}</strong> &nbsp;|&nbsp;
+                  A={result.curveFit.params.A.toFixed(3)},
+                  B={result.curveFit.params.B.toFixed(3)},
+                  C={result.curveFit.params.C.toFixed(3)},
+                  D={result.curveFit.params.D.toFixed(3)}
+                </div>
+              </>
+            ) : (
+              <p style={{ color: 'var(--fg-muted)', fontSize: '0.85rem' }}>
+                Import data &amp; assign wells, then click "▶ Fit Curve"
+              </p>
+            )}
+          </div>
+
+          <div className="panel">
+            <div className="panel-header">
+              <h3>Results</h3>
+              {result && (
+                <div className="export-inline">
+                  <button onClick={handleExportCSV} title="Export as CSV">💾 CSV</button>
+                </div>
+              )}
+            </div>
+            {result ? (
+              <ResultsTable groups={result.groups} />
+            ) : (
+              <p style={{ color: 'var(--fg-muted)', fontSize: '0.85rem' }}>
+                No results yet
+              </p>
+            )}
+          </div>
         </div>
       </div>
 

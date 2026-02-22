@@ -38,27 +38,31 @@ test.describe('Core Workflow', () => {
     await expect(wells).toHaveCount(96);
   });
 
-  test('can assign well types via tool selector and clicking', async ({ page }) => {
-    // Default tool is 'standard' — click a well
+  test('can assign well types via role selector and clicking', async ({ page }) => {
+    const roleSelector = page.locator('[data-testid="role-selector"]');
+
+    // Click a well to select it, then assign as standard
     const well_A1 = page.locator('.well').first();
     await well_A1.click();
+    await expect(well_A1).toHaveClass(/selected/);
+    await roleSelector.getByRole('button', { name: /Standard/ }).click();
     await expect(well_A1).toHaveAttribute('data-type', 'standard');
 
-    // Switch to unknown tool
-    const toolSelect = page.locator('select').nth(1); // second select is tool
-    await toolSelect.selectOption('unknown');
+    // Click well A2, assign as unknown
     const well_A2 = page.locator('.well').nth(1);
     await well_A2.click();
+    await roleSelector.getByRole('button', { name: /Unknown/ }).click();
     await expect(well_A2).toHaveAttribute('data-type', 'unknown');
 
-    // Switch to blank tool
-    await toolSelect.selectOption('blank');
+    // Click well A3, assign as blank
     const well_A3 = page.locator('.well').nth(2);
     await well_A3.click();
+    await roleSelector.getByRole('button', { name: /Blank/ }).click();
     await expect(well_A3).toHaveAttribute('data-type', 'blank');
 
-    // Toggle off by clicking again with same tool
+    // Select well A3 again and clear it
     await well_A3.click();
+    await roleSelector.getByRole('button', { name: /Clear/ }).click();
     await expect(well_A3).toHaveAttribute('data-type', 'empty');
   });
 
@@ -239,13 +243,14 @@ test.describe('UI Features', () => {
     await expect(page.locator('.results-table th').first()).toContainText('↑');
   });
 
-  test('CSV export button is disabled without results, enabled after fit', async ({ page }) => {
-    const csvBtn = page.getByRole('button', { name: /CSV/i });
-    await expect(csvBtn).toBeDisabled();
+  test('CSV export button appears only after fit', async ({ page }) => {
+    // No CSV button before fit
+    await expect(page.locator('.export-inline button', { hasText: 'CSV' })).toHaveCount(0);
 
     await loadSample(page, 0);
     await fitCurve(page);
-    await expect(csvBtn).toBeEnabled();
+    // CSV button appears after fit
+    await expect(page.locator('.export-inline button', { hasText: 'CSV' })).toBeVisible();
   });
 
   test('Fit Curve button is disabled without plate data', async ({ page }) => {
@@ -292,12 +297,11 @@ test.describe('Edge Cases', () => {
     // Reset layout to clear all assignments
     await page.getByRole('button', { name: /Reset/i }).click();
 
-    // Assign wells as blank only
-    const toolSelect = page.locator('select').nth(1);
-    await toolSelect.selectOption('blank');
+    // Select wells and assign as blank
     for (let i = 0; i < 4; i++) {
-      await page.locator('.well').nth(i).click();
+      await page.locator('.well').nth(i).click({ modifiers: i > 0 ? ['Shift'] : [] });
     }
+    await page.locator('[data-testid="role-selector"] button', { hasText: 'Blank' }).click();
 
     // Try to fit
     await fitCurve(page);
@@ -311,10 +315,9 @@ test.describe('Edge Cases', () => {
     await loadSample(page, 0);
     await page.getByRole('button', { name: /Reset/i }).click();
 
-    // Assign one well as standard
-    const toolSelect = page.locator('select').nth(1);
-    await toolSelect.selectOption('standard');
+    // Select one well and assign as standard
     await page.locator('.well').first().click();
+    await page.locator('[data-testid="role-selector"] button', { hasText: 'Standard' }).click();
 
     // Try to fit
     await fitCurve(page);
@@ -399,5 +402,75 @@ test.describe('Competitive ELISA', () => {
     expect(match).toBeTruthy();
     const r2 = parseFloat(match![1]);
     expect(r2).toBeGreaterThan(0.95);
+  });
+});
+
+// ──────────────────────────────────────────
+// User Feedback Tests
+// ──────────────────────────────────────────
+
+test.describe('User Feedback', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/');
+  });
+
+  test('multi-well selection with shift-click assigns all selected wells', async ({ page }) => {
+    const well_A1 = page.locator('.well').first();
+    const well_A2 = page.locator('.well').nth(1);
+    const well_A3 = page.locator('.well').nth(2);
+
+    // Select multiple wells with shift-click
+    await well_A1.click();
+    await well_A2.click({ modifiers: ['Shift'] });
+    await well_A3.click({ modifiers: ['Shift'] });
+
+    await expect(well_A1).toHaveClass(/selected/);
+    await expect(well_A2).toHaveClass(/selected/);
+    await expect(well_A3).toHaveClass(/selected/);
+
+    // Selection count shown
+    await expect(page.getByText('3 wells selected')).toBeVisible();
+
+    // Apply Standard role to all selected
+    await page.locator('[data-testid="role-selector"] button', { hasText: 'Standard' }).click();
+    await expect(well_A1).toHaveAttribute('data-type', 'standard');
+    await expect(well_A2).toHaveAttribute('data-type', 'standard');
+    await expect(well_A3).toHaveAttribute('data-type', 'standard');
+  });
+
+  test('Fit Curve button has CTA styling', async ({ page }) => {
+    const fitBtn = page.getByRole('button', { name: /Fit Curve/i });
+    await expect(fitBtn).toHaveClass(/btn-cta/);
+  });
+
+  test('dark theme renders correct background and text colors', async ({ page }) => {
+    await page.getByRole('button', { name: '🌙' }).click();
+    const app = page.locator('.app');
+    await expect(app).toHaveAttribute('data-theme', 'dark');
+
+    // Body background is dark
+    const bgColor = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+    expect(bgColor).toBe('rgb(15, 23, 42)');
+
+    // Panel uses surface color
+    const panelBg = await page.evaluate(() => getComputedStyle(document.querySelector('.panel')!).backgroundColor);
+    expect(panelBg).toBe('rgb(30, 41, 59)');
+
+    // Text is light
+    const fgColor = await page.evaluate(() => getComputedStyle(document.querySelector('.app')!).color);
+    expect(fgColor).toBe('rgb(226, 232, 240)');
+  });
+
+  test('in-place export buttons appear after fit', async ({ page }) => {
+    // Before fit: no export buttons
+    await expect(page.locator('.export-inline')).toHaveCount(0);
+
+    await loadSample(page, 0);
+    await fitCurve(page);
+
+    // After fit: PNG, SVG near chart; CSV near results
+    await expect(page.locator('.export-inline button', { hasText: 'PNG' })).toBeVisible();
+    await expect(page.locator('.export-inline button', { hasText: 'SVG' })).toBeVisible();
+    await expect(page.locator('.export-inline button', { hasText: 'CSV' })).toBeVisible();
   });
 });
