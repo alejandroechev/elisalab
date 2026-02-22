@@ -4,7 +4,7 @@
 
 Replace Excel and MyAssays with a clean web tool: paste your plate reader data, fit a 4-Parameter Logistic curve, and get interpolated concentrations in seconds.
 
-![ElisaLab Screenshot](docs/screenshot.png) <!-- TODO: add screenshot -->
+![ElisaLab Screenshot](docs/screenshot.png)
 
 ## Features
 
