@@ -53,6 +53,7 @@ export default function Toolbar({
       <button onClick={onExportCSV} disabled={!hasResult}>💾 CSV</button>
       <button onClick={onExportChart} disabled={!hasResult}>🖼️ Chart PNG</button>
       <button onClick={() => window.open('/intro.html', '_blank')} title="Domain guide">📖 Guide</button>
+      <button onClick={() => window.open('https://github.com/alejandroechev/elisalab/issues/new', '_blank')} title="Feedback">💬 Feedback</button>
       <button onClick={onToggleTheme}>{theme === 'light' ? '🌙' : '☀️'}</button>
     </div>
   );
