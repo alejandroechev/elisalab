@@ -8,7 +8,7 @@
 
 **Body:**
 
-If you've ever wrestled with Excel trying to fit a 4PL curve to your ELISA standards, I built something for you. ElisaLab is a free web app that does 4-parameter logistic curve fitting, 96-well plate layout management, and automatic interpolation of unknown concentrations.
+I built ElisaLab, a free web app for ELISA analysis with 4-parameter logistic curve fitting, 96-well plate layout management, and automatic interpolation of unknown concentrations.
 
 Set up your plate layout (standards, unknowns, blanks), enter OD values, and it fits the 4PL model and back-calculates concentrations. Shows R², CV% for replicates, and the fitted curve.
 
