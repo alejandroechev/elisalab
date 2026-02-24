@@ -23,13 +23,13 @@ Would love feedback from people running ELISAs regularly — what would make thi
 
 ## Post 2: r/immunology
 
-**Title:** Free browser tool for ELISA data analysis — 4PL fitting without GraphPad or Excel headaches
+**Title:** Free browser tool for ELISA data analysis — 4PL fitting for ELISA data analysis
 
 **Body:**
 
 I built a free, open-source web app for ELISA data analysis. It does 4-parameter logistic curve fitting to your standard curve and interpolates unknown sample concentrations automatically.
 
-Supports full 96-well plate layout, replicate averaging with CV% flagging, and gives you publication-ready curve plots. No GraphPad license needed.
+Supports full 96-well plate layout, replicate averaging with CV% flagging, and gives you publication-ready curve plots. 
 
 🔗 https://elisalab.vercel.app
 📂 https://github.com/alejandroechev/elisalab
@@ -52,3 +52,4 @@ No software to install, no account needed, no data leaves your browser. Open sou
 📂 https://github.com/alejandroechev/elisalab
 
 Feedback welcome — especially on import/export formats that would save you time.
+
