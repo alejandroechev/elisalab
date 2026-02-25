@@ -1,22 +1,24 @@
-import { PlateData, PlateLayout, AnalysisResult, wellName } from './types.js';
+import { PlateData, PlateLayout, AnalysisResult, FitModel, FivePLParams, wellName } from './types.js';
 import { computeBlankMean, getStandardPoints, getWellsByGroup } from './layout.js';
-import { fit4PL } from './curve-fit.js';
-import { inverse4PL } from './interpolation.js';
+import { fit4PL, fit5PL } from './curve-fit.js';
+import { inverse4PL, inverse5PL } from './interpolation.js';
 import { computeGroupStats } from './statistics.js';
 
 /** Run the complete ELISA analysis pipeline */
-export function analyze(data: PlateData, layout: PlateLayout): AnalysisResult {
+export function analyze(data: PlateData, layout: PlateLayout, model: FitModel = '4pl'): AnalysisResult {
   // 1. Compute blank mean
   const blankMean = computeBlankMean(layout, data);
 
   // 2. Get standard curve points
   const stdPoints = getStandardPoints(layout, data, blankMean);
-  if (stdPoints.length < 4) {
-    throw new Error(`Need at least 4 standard groups, got ${stdPoints.length}`);
+  const minPoints = model === '5pl' ? 5 : 4;
+  if (stdPoints.length < minPoints) {
+    throw new Error(`Need at least ${minPoints} standard groups for ${model.toUpperCase()} fitting, got ${stdPoints.length}`);
   }
 
-  // 3. Fit 4PL curve
-  const curveFit = fit4PL(stdPoints.map(p => ({ x: p.concentration, y: p.od })));
+  // 3. Fit curve
+  const fitPoints = stdPoints.map(p => ({ x: p.concentration, y: p.od }));
+  const curveFit = model === '5pl' ? fit5PL(fitPoints) : fit4PL(fitPoints);
 
   // 4. Interpolate unknowns and standards
   const groupMap = getWellsByGroup(layout, data, blankMean);
@@ -24,7 +26,9 @@ export function analyze(data: PlateData, layout: PlateLayout): AnalysisResult {
   for (const [, group] of groupMap) {
     for (const well of group.wells) {
       if (group.type === 'blank') continue;
-      const result = inverse4PL(well.odCorrected, curveFit.params);
+      const result = model === '5pl'
+        ? inverse5PL(well.odCorrected, curveFit.params as FivePLParams)
+        : inverse4PL(well.odCorrected, curveFit.params);
       if (result) {
         well.concentration = result.concentration;
         well.flag = result.flag;

@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import {
-  PlateData, PlateLayout, AnalysisResult,
+  PlateData, PlateLayout, AnalysisResult, FitModel, FivePLParams,
   createEmptyLayout, assignWell, WellAssignment,
   parsePlateData, analyze, exportResultsCSV, getCurvePlotData,
   COLS, getStandardPoints,
@@ -54,6 +54,7 @@ export default function App() {
   const [nextStdIndex, setNextStdIndex] = useState(saved.current?.nextStdIndex ?? 0);
   const [error, setError] = useState<string | null>(null);
   const [selectedWells, setSelectedWells] = useState<Set<string>>(new Set());
+  const [fitModel, setFitModel] = useState<FitModel>('4pl');
 
   // Auto-save state to localStorage
   useEffect(() => {
@@ -148,13 +149,13 @@ export default function App() {
   const handleFitCurve = useCallback(() => {
     if (!plateData) { setError('Import plate data first'); return; }
     try {
-      const r = analyze(plateData, layout);
+      const r = analyze(plateData, layout, fitModel);
       setResult(r);
       setError(null);
     } catch (e: any) {
       setError(e.message);
     }
-  }, [plateData, layout]);
+  }, [plateData, layout, fitModel]);
 
   const handleExportCSV = useCallback(() => {
     if (!result) return;
@@ -246,6 +247,8 @@ export default function App() {
         onLoadSample={handleLoadSample}
         theme={theme}
         hasData={!!plateData}
+        fitModel={fitModel}
+        onFitModelChange={setFitModel}
       />
 
       {error && <div className="error-banner">{error}</div>}
@@ -302,13 +305,18 @@ export default function App() {
                 <StandardCurveChart
                   curveData={curveData}
                   standardPoints={stdPointsForChart}
+                  modelLabel={`${result.curveFit.model.toUpperCase()} Fit`}
                 />
                 <div className="fit-info">
-                  <strong>R² = {result.curveFit.rSquared.toFixed(4)}</strong> &nbsp;|&nbsp;
+                  <strong>R² = {result.curveFit.rSquared.toFixed(4)}</strong>
+                  &nbsp;({result.curveFit.model.toUpperCase()})&nbsp;|&nbsp;
                   A={result.curveFit.params.A.toFixed(3)},
                   B={result.curveFit.params.B.toFixed(3)},
                   C={result.curveFit.params.C.toFixed(3)},
                   D={result.curveFit.params.D.toFixed(3)}
+                  {result.curveFit.model === '5pl' && (result.curveFit.params as FivePLParams).S !== undefined && (
+                    <>, S={(result.curveFit.params as FivePLParams).S.toFixed(3)}</>
+                  )}
                 </div>
               </>
             ) : (

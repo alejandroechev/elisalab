@@ -6,9 +6,10 @@ import {
 interface Props {
   curveData: { x: number; y: number }[];
   standardPoints: { concentration: number; od: number }[];
+  modelLabel?: string;
 }
 
-export default function StandardCurveChart({ curveData, standardPoints }: Props) {
+export default function StandardCurveChart({ curveData, standardPoints, modelLabel }: Props) {
   // Convert standard points to chart format
   const scatterData = standardPoints.map(p => ({ x: p.concentration, y: p.od }));
 
@@ -41,7 +42,7 @@ export default function StandardCurveChart({ curveData, standardPoints }: Props)
             stroke="#3b82f6"
             strokeWidth={2}
             dot={false}
-            name="4PL Fit"
+            name={modelLabel ?? '4PL Fit'}
             isAnimationActive={false}
           />
           <Scatter

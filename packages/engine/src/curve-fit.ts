@@ -1,10 +1,17 @@
-import { FourPLParams, CurveFitResult } from './types.js';
+import { FourPLParams, FivePLParams, FitModel, CurveFitResult } from './types.js';
 
 /** Evaluate the 4PL model: y = D + (A - D) / (1 + (x/C)^B) */
 export function fourPL(x: number, p: FourPLParams): number {
   const { A, B, C, D } = p;
   if (x <= 0) return A; // at zero concentration, return min asymptote
   return D + (A - D) / (1 + Math.pow(x / C, B));
+}
+
+/** Evaluate the 5PL model: y = D + (A - D) / (1 + (x/C)^B)^S */
+export function fivePL(x: number, p: FivePLParams): number {
+  const { A, B, C, D, S } = p;
+  if (x <= 0) return A;
+  return D + (A - D) / Math.pow(1 + Math.pow(x / C, B), S);
 }
 
 /** Estimate initial 4PL parameters from data points */
@@ -139,7 +146,105 @@ export function fit4PL(points: { x: number; y: number }[]): CurveFitResult {
   const ssRes = sumSqRes(params);
   const rSquared = ssTot > 0 ? 1 - ssRes / ssTot : 0;
 
-  return { params, rSquared };
+  return { model: '4pl' as FitModel, params, rSquared };
+}
+
+/**
+ * Fit a 5PL curve using Levenberg-Marquardt optimization.
+ * 5PL: y = D + (A - D) / (1 + (x/C)^B)^S
+ */
+export function fit5PL(points: { x: number; y: number }[]): CurveFitResult {
+  if (points.length < 5) {
+    throw new Error('Need at least 5 data points for 5PL fitting');
+  }
+
+  const init4 = estimateInitial(points);
+  let params: FivePLParams = { ...init4, S: 1.0 };
+  let lambda = 0.001;
+  const maxIter = 1500;
+  const tol = 1e-12;
+  const nParams = 5;
+
+  const paramVec = () => [params.A, params.B, params.C, params.D, params.S];
+  const fromVec = (v: number[]): FivePLParams => ({ A: v[0], B: v[1], C: v[2], D: v[3], S: v[4] });
+
+  const residuals = (p: FivePLParams) =>
+    points.map(pt => pt.y - fivePL(pt.x, p));
+
+  const sumSqRes = (p: FivePLParams) =>
+    residuals(p).reduce((s, r) => s + r * r, 0);
+
+  const jacobian = (p: FivePLParams): number[][] => {
+    const eps = 1e-8;
+    const pv = paramVec();
+    const J: number[][] = [];
+    for (let i = 0; i < points.length; i++) {
+      const row: number[] = [];
+      const y0 = fivePL(points[i].x, p);
+      for (let j = 0; j < nParams; j++) {
+        const pPlus = [...pv];
+        pPlus[j] += eps;
+        const yPlus = fivePL(points[i].x, fromVec(pPlus));
+        row.push(-(yPlus - y0) / eps);
+      }
+      J.push(row);
+    }
+    return J;
+  };
+
+  let prevSSR = sumSqRes(params);
+
+  for (let iter = 0; iter < maxIter; iter++) {
+    const r = residuals(params);
+    const J = jacobian(params);
+
+    const JtJ: number[][] = Array.from({ length: nParams }, () => new Array(nParams).fill(0));
+    const JtR: number[] = new Array(nParams).fill(0);
+
+    for (let i = 0; i < points.length; i++) {
+      for (let j = 0; j < nParams; j++) {
+        JtR[j] += J[i][j] * r[i];
+        for (let k = 0; k < nParams; k++) {
+          JtJ[j][k] += J[i][j] * J[i][k];
+        }
+      }
+    }
+
+    const A_mat = JtJ.map((row, i) => {
+      const nr = [...row];
+      nr[i] += lambda;
+      return nr;
+    });
+
+    const delta = solveLinear(A_mat, JtR);
+    if (!delta) { lambda *= 10; continue; }
+
+    const pv = paramVec();
+    const newPv = pv.map((v, i) => v + delta[i]);
+
+    // Constraints: C > 0, S > 0.01
+    if (newPv[2] <= 0) newPv[2] = 0.001;
+    if (newPv[4] <= 0.01) newPv[4] = 0.01;
+
+    const newParams = fromVec(newPv);
+    const newSSR = sumSqRes(newParams);
+
+    if (newSSR < prevSSR) {
+      params = newParams;
+      lambda = Math.max(lambda / 10, 1e-15);
+      if (Math.abs(prevSSR - newSSR) < tol) break;
+      prevSSR = newSSR;
+    } else {
+      lambda *= 10;
+    }
+  }
+
+  const meanY = points.reduce((s, p) => s + p.y, 0) / points.length;
+  const ssTot = points.reduce((s, p) => s + (p.y - meanY) ** 2, 0);
+  const ssRes = sumSqRes(params);
+  const rSquared = ssTot > 0 ? 1 - ssRes / ssTot : 0;
+
+  return { model: '5pl', params, rSquared };
 }
 
 /** Solve 4×4 linear system Ax = b using Gaussian elimination */

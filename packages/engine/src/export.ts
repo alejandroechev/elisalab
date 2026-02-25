@@ -1,4 +1,5 @@
-import { WellResult, GroupResult, CurveFitResult } from './types.js';
+import { WellResult, GroupResult, CurveFitResult, FivePLParams } from './types.js';
+import { fourPL, fivePL } from './curve-fit.js';
 
 /** Format results as CSV string */
 export function exportResultsCSV(wells: WellResult[]): string {
@@ -42,7 +43,6 @@ export function getCurvePlotData(
   maxX: number,
   nPoints: number = 100
 ): { x: number; y: number }[] {
-  const { A, B, C, D } = fit.params;
   const logMin = Math.log10(Math.max(minX, 0.001));
   const logMax = Math.log10(maxX);
   const step = (logMax - logMin) / (nPoints - 1);
@@ -50,7 +50,9 @@ export function getCurvePlotData(
   const data: { x: number; y: number }[] = [];
   for (let i = 0; i < nPoints; i++) {
     const x = Math.pow(10, logMin + step * i);
-    const y = D + (A - D) / (1 + Math.pow(x / C, B));
+    const y = fit.model === '5pl'
+      ? fivePL(x, fit.params as FivePLParams)
+      : fourPL(x, fit.params);
     data.push({ x, y });
   }
   return data;

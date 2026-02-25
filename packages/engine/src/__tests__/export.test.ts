@@ -20,6 +20,7 @@ describe('exportResultsCSV', () => {
 describe('getCurvePlotData', () => {
   it('generates log-spaced curve points', () => {
     const fit: CurveFitResult = {
+      model: '4pl',
       params: { A: 0.05, B: 1.5, C: 50, D: 2.5 },
       rSquared: 0.999,
     };

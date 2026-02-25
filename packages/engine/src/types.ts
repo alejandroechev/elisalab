@@ -23,6 +23,8 @@ export interface PlateData {
   values: number[][];
 }
 
+export type FitModel = '4pl' | '5pl';
+
 export interface FourPLParams {
   A: number; // min asymptote
   B: number; // Hill slope
@@ -30,8 +32,13 @@ export interface FourPLParams {
   D: number; // max asymptote
 }
 
+export interface FivePLParams extends FourPLParams {
+  S: number; // asymmetry factor (S=1 reduces to 4PL)
+}
+
 export interface CurveFitResult {
-  params: FourPLParams;
+  model: FitModel;
+  params: FourPLParams | FivePLParams;
   rSquared: number;
 }
 
