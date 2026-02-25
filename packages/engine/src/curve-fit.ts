@@ -150,7 +150,8 @@ export function fit4PL(points: { x: number; y: number }[]): CurveFitResult {
 }
 
 /**
- * Fit a 5PL curve using Levenberg-Marquardt optimization.
+ * Fit a 5PL curve using Levenberg-Marquardt optimization with multi-start.
+ * Tries several initial S values to avoid local minima at S=1.
  * 5PL: y = D + (A - D) / (1 + (x/C)^B)^S
  */
 export function fit5PL(points: { x: number; y: number }[]): CurveFitResult {
@@ -159,7 +160,29 @@ export function fit5PL(points: { x: number; y: number }[]): CurveFitResult {
   }
 
   const init4 = estimateInitial(points);
-  let params: FivePLParams = { ...init4, S: 1.0 };
+  const startS = [0.3, 0.5, 0.8, 1.0, 1.5, 2.0];
+  let bestResult: { params: FivePLParams; ssr: number } | null = null;
+
+  for (const initS of startS) {
+    const result = fit5PLFromInit({ ...init4, S: initS }, points);
+    if (!bestResult || result.ssr < bestResult.ssr) {
+      bestResult = result;
+    }
+  }
+
+  const meanY = points.reduce((s, p) => s + p.y, 0) / points.length;
+  const ssTot = points.reduce((s, p) => s + (p.y - meanY) ** 2, 0);
+  const rSquared = ssTot > 0 ? 1 - bestResult!.ssr / ssTot : 0;
+
+  return { model: '5pl', params: bestResult!.params, rSquared };
+}
+
+/** Single LM run for 5PL from given initial parameters */
+function fit5PLFromInit(
+  initParams: FivePLParams,
+  points: { x: number; y: number }[]
+): { params: FivePLParams; ssr: number } {
+  let params = { ...initParams };
   let lambda = 0.001;
   const maxIter = 1500;
   const tol = 1e-12;
@@ -239,12 +262,7 @@ export function fit5PL(points: { x: number; y: number }[]): CurveFitResult {
     }
   }
 
-  const meanY = points.reduce((s, p) => s + p.y, 0) / points.length;
-  const ssTot = points.reduce((s, p) => s + (p.y - meanY) ** 2, 0);
-  const ssRes = sumSqRes(params);
-  const rSquared = ssTot > 0 ? 1 - ssRes / ssTot : 0;
-
-  return { model: '5pl', params, rSquared };
+  return { params, ssr: sumSqRes(params) };
 }
 
 /** Solve 4×4 linear system Ax = b using Gaussian elimination */

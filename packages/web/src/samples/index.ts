@@ -180,10 +180,37 @@ const competitive = buildSample(
   ],
 );
 
+// 5PL: A=0.07, B=1.3, C=80, D=2.5, S=0.6
+// Asymmetric curve — wide concentration range needed so upper asymptote is visible.
+const asymmetricBinding = buildSample(
+  'Asymmetric Binding (5PL)',
+  'Asymmetric dose-response (S≈0.6). Wide range reveals the slow upper plateau. Compare 4PL vs 5PL R² to see the improvement.',
+  [2000, 1000, 500, 250, 125, 62.5, 31.25],
+  [
+    [2.291, 2.258],
+    [2.151, 2.115],
+    [1.923, 1.889],
+    [1.638, 1.602],
+    [1.217, 1.185],
+    [0.776, 0.752],
+    [0.431, 0.416],
+  ],
+  [0.052, 0.048],
+  [
+    [0.571, 0.550],  // ~40
+    [0.952, 0.928],  // ~80
+    [1.316, 1.284],  // ~150
+    [1.718, 1.682],  // ~300
+    [1.976, 1.944],  // ~600
+    [0.256, 0.245],  // ~20
+  ],
+);
+
 export const sampleDatasets: SampleDataset[] = [
   il6,
   tnfAlpha,
   igg,
   poorQuality,
   competitive,
+  asymmetricBinding,
 ];

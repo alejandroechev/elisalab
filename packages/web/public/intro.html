@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ElisaLab — Introduction to ELISA &amp; 4PL Analysis</title>
+<title>ElisaLab — Introduction to ELISA &amp; Curve Fitting (4PL / 5PL)</title>
 <style>
   :root {
     --bg: #ffffff;
@@ -187,7 +187,7 @@
 <!-- Hero -->
 <div class="hero">
   <h1>🧪 ElisaLab</h1>
-  <p class="tagline">Free, browser-based ELISA data analysis — 4PL curve fitting &amp; concentration interpolation</p>
+  <p class="tagline">Free, browser-based ELISA data analysis — 4PL &amp; 5PL curve fitting with concentration interpolation</p>
 </div>
 
 <!-- What is ELISA? -->
@@ -251,6 +251,44 @@
   </div>
   <p>
     This is how ElisaLab converts raw OD readings from unknown samples into concentrations.
+  </p>
+</section>
+
+<!-- 5PL Curve -->
+<section>
+  <h2>The 5-Parameter Logistic (5PL) Model</h2>
+  <p>
+    The 4PL model assumes the dose–response curve is <strong>symmetric</strong> around its inflection point — the transition from baseline to plateau looks the same on both sides. In practice, many immunoassays produce <em>asymmetric</em> curves where the upper portion flattens more gradually than the lower portion (or vice versa).
+  </p>
+  <p>
+    The <strong>5-Parameter Logistic</strong> model adds an asymmetry factor <strong>S</strong>:
+  </p>
+  <div class="equation">
+    y = D + (A − D) / (1 + (x / C)<sup>B</sup>)<sup>S</sup>
+  </div>
+  <table>
+    <thead>
+      <tr><th>Parameter</th><th>Name</th><th>Meaning</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><strong>A, B, C, D</strong></td><td>(same as 4PL)</td><td>Min asymptote, Hill slope, EC50, max asymptote</td></tr>
+      <tr><td><strong>S</strong></td><td>Asymmetry factor</td><td>Controls curve asymmetry. When S = 1, 5PL reduces to 4PL. S &lt; 1 stretches the upper transition; S &gt; 1 compresses it.</td></tr>
+    </tbody>
+  </table>
+  <h3>When to use 5PL</h3>
+  <div class="card">
+    <ul>
+      <li><strong>Asymmetric standard curves</strong> — if your 4PL fit has systematic residuals (over-predicts on one side, under-predicts on the other), try 5PL.</li>
+      <li><strong>Wide dynamic ranges</strong> — assays spanning 3+ orders of magnitude often benefit from 5PL.</li>
+      <li><strong>Competitive ELISAs</strong> — some competitive formats produce inherently asymmetric dose–response curves.</li>
+    </ul>
+  </div>
+  <h3>Considerations</h3>
+  <p>
+    5PL has <strong>5 free parameters</strong>, so it requires more standard points for a reliable fit. As a rule of thumb, use at least <strong>7–8 standard points</strong> for 5PL (vs 6+ for 4PL). With fewer points, the extra parameter can overfit. If R² is similar between 4PL and 5PL, prefer 4PL for simplicity.
+  </p>
+  <p>
+    <em>Tip:</em> Load the "Asymmetric Binding (5PL)" sample dataset and try fitting with both models to see the difference.
   </p>
 </section>
 
@@ -380,10 +418,10 @@
       <strong>Assign well types</strong> — Select a tool (Standard, Unknown, Blank) from the dropdown, then click wells on the plate grid to assign them. Standards are assigned in order of your concentration list. Click a well again to clear it.
     </li>
     <li>
-      <strong>Fit the curve</strong> — Click "📈 Fit Curve". ElisaLab subtracts the blank mean, fits a 4PL model to your standards using Levenberg-Marquardt optimization, and interpolates unknown concentrations.
+      <strong>Choose model &amp; fit</strong> — Select <strong>4PL</strong> or <strong>5PL</strong> from the model dropdown, then click "▶ Fit Curve". ElisaLab subtracts the blank mean, fits the selected model using Levenberg-Marquardt optimization, and interpolates unknown concentrations. Start with 4PL; switch to 5PL if you see systematic residuals or know your assay is asymmetric.
     </li>
     <li>
-      <strong>Review results</strong> — The standard curve chart shows your data points and the fitted 4PL curve with R². The results table lists each sample group with mean OD, interpolated concentration, and CV%.
+      <strong>Review results</strong> — The standard curve chart shows your data points and the fitted curve (labeled 4PL or 5PL) with R². The fit info line displays all parameters including S for 5PL. The results table lists each sample group with mean OD, interpolated concentration, and CV%.
     </li>
     <li>
       <strong>Export</strong> — Download results as CSV ("💾 CSV") or save the standard curve chart as PNG ("🖼️ Chart PNG") for reports and publications.
@@ -402,7 +440,10 @@
     <dd>A set of wells with known concentrations used to establish the dose–response relationship. The 4PL model is fitted to these points.</dd>
 
     <dt>4PL (4-Parameter Logistic)</dt>
-    <dd>A mathematical model describing the sigmoidal relationship between concentration and OD. Parameters: minimum asymptote (A), Hill slope (B), EC50 (C), maximum asymptote (D).</dd>
+    <dd>A mathematical model describing the symmetric sigmoidal relationship between concentration and OD. Parameters: minimum asymptote (A), Hill slope (B), EC50 (C), maximum asymptote (D).</dd>
+
+    <dt>5PL (5-Parameter Logistic)</dt>
+    <dd>An extension of 4PL that adds an asymmetry factor (S). When S = 1, 5PL reduces to 4PL. Use 5PL when the dose–response curve is asymmetric. Requires at least 7–8 standard points for reliable fitting.</dd>
 
     <dt>EC50</dt>
     <dd>The effective concentration at 50% of the maximum response — the inflection point of the 4PL curve (parameter C).</dd>
@@ -420,7 +461,7 @@
     <dd>Wells containing no analyte or sample, used to measure background signal. The mean blank OD is subtracted from all wells.</dd>
 
     <dt>Interpolation</dt>
-    <dd>Using the inverse 4PL equation to calculate the concentration of an unknown sample from its measured OD value.</dd>
+    <dd>Using the inverse 4PL or 5PL equation to calculate the concentration of an unknown sample from its measured OD value.</dd>
 
     <dt>Out-of-Range</dt>
     <dd>A sample whose OD falls outside the range of the standard curve, meaning its concentration cannot be reliably interpolated. These require dilution (if too high) or concentration (if too low).</dd>
@@ -429,7 +470,7 @@
     <dd>A stepwise dilution series (e.g., 1:2) used to prepare standards spanning several orders of magnitude in concentration.</dd>
 
     <dt>Levenberg-Marquardt</dt>
-    <dd>An iterative optimization algorithm used to fit the 4PL model to standard curve data by minimizing the sum of squared residuals.</dd>
+    <dd>An iterative optimization algorithm used to fit the 4PL or 5PL model to standard curve data by minimizing the sum of squared residuals.</dd>
   </dl>
 </section>
 
