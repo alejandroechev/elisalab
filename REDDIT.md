@@ -53,3 +53,13 @@ No software to install, no account needed, no data leaves your browser. Open sou
 
 Feedback welcome — especially on import/export formats that would save you time.
 
+
+---
+
+## Updated Post Footer (add to all posts)
+
+> **A note on this project:** I'm a software engineer exploring what happens when you use AI to build professional tools in domains you're not an expert in. I've built 14 of these so far — across civil engineering, life sciences, optics, and petroleum engineering — and I'm documenting the journey.
+>
+> The biggest lesson: AI makes coding easy, but **domain expertise is irreplaceable.** These tools work, but they'd be *much* better if built by someone who actually works in this field. If you're a practitioner frustrated by expensive legacy tools, you might be surprised what you can build with AI now.
+>
+> I write about this at **[Infinite Practitioner](https://infinitepractitioner.substack.com)** — a newsletter about domain experts building their own software tools with AI.
