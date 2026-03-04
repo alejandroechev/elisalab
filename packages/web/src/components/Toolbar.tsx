@@ -1,6 +1,4 @@
-import { useState } from 'react';
 import { sampleDatasets } from '../samples/index.js';
-import { FeedbackModal } from './FeedbackModal';
 import type { FitModel } from '@elisalab/engine';
 
 interface Props {
@@ -20,7 +18,6 @@ export default function Toolbar({
   onToggleTheme, onResetLayout, onLoadSample, theme,
   hasData, fitModel, onFitModelChange,
 }: Props) {
-  const [showFeedback, setShowFeedback] = useState(false);
   return (
     <div className="toolbar">
       <h1>🧪 ElisaLab</h1>
@@ -54,11 +51,10 @@ export default function Toolbar({
 
       <div className="toolbar-right">
         <button onClick={() => window.open('/intro.html', '_blank')} title="Domain guide">📖 Guide</button>
-        <button onClick={() => setShowFeedback(true)} title="Feedback">💬 Feedback</button>
+        <a href="https://github.com/alejandroechev/elisalab/issues" target="_blank" rel="noopener noreferrer" className="github-link">💬 Feedback</a>
         <a className="github-link" href="https://github.com/alejandroechev/elisalab" target="_blank" rel="noopener noreferrer">GitHub</a>
         <button onClick={onToggleTheme}>{theme === 'light' ? '🌙' : '☀️'}</button>
       </div>
-      {showFeedback && <FeedbackModal product="ElisaLab" onClose={() => setShowFeedback(false)} />}
     </div>
   );
 }
